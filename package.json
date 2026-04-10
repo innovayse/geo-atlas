@@ -1,0 +1,30 @@
+{
+  "name": "@innovayse/geo-atlas",
+  "version": "1.0.0",
+  "description": "Offline countries, states and cities with multilingual support (EN/RU/HY + 15 languages).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "countries",
+    "cities",
+    "states",
+    "i18n",
+    "translations",
+    "offline",
+    "armenia",
+    "russian",
+    "armenian"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "4.9.5",
+    "@types/node": "18.19.0"
+  },
+  "files": [
+    "dist/**/*"
+  ]
+}
