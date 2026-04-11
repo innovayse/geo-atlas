@@ -9,12 +9,14 @@ Zero API calls — all data is bundled locally.
 
 ## Features
 
-- **250 countries** with ISO2 codes, flags, phone codes, capitals, coordinates
+- **250 countries** with ISO2/ISO3 codes, flags, phone codes, capitals, coordinates
 - **147,000+ cities** across all countries with coordinates
 - **Complete multilingual city names**: English, Russian (ru), Armenian (hy) + 15 more languages
-- **Native script** support for each city/country
+- **Country translations**: all 250 countries translated to Russian and Armenian
+- **Native script** support for each city and country
+- **Dual ESM + CJS build** — works in browsers, Node.js, Nuxt 3, Vite
 - **TypeScript** — full type declarations included
-- **Zero dependencies** — fully offline, no API calls
+- **Zero runtime dependencies** — fully offline, no API calls
 
 ## Installation
 
@@ -33,10 +35,26 @@ const countries = CountriesAtlas.getCountries()
 // [{ iso2: 'AM', name: 'Armenia', native: 'Հայաստան', emoji: '🇦🇲', phone: 374, ... }]
 ```
 
-### Get states/regions of a country
+### Find a country by ISO2
+
+```ts
+const armenia = CountriesAtlas.find('AM')
+// { iso2: 'AM', name: 'Armenia', translations: { hy: 'Հայաստան', ru: 'Армения' }, ... }
+```
+
+### Get states/regions — sync (Node.js / CJS)
 
 ```ts
 const states = CountriesAtlas.getStates('AM')
+// [{ name: 'Yerevan', cities: [...] }, ...]
+```
+
+### Get states/regions — async (Browser / ESM)
+
+`getStatesAsync` uses dynamic `import()` and works in all environments including browsers:
+
+```ts
+const states = await CountriesAtlas.getStatesAsync('AM')
 // [{ name: 'Yerevan', cities: [...] }, ...]
 ```
 
@@ -69,6 +87,7 @@ Each city includes:
 ```ts
 type Country = {
   iso2: string        // 'AM'
+  iso3: string        // 'ARM'
   name: string        // 'Armenia'
   native: string      // 'Հայաստան'
   emoji: string       // '🇦🇲'
@@ -76,39 +95,59 @@ type Country = {
   phone: number       // 374
   latitude: string    // '40.0'
   longitude: string   // '45.0'
-  translations: Record<string, string>
+  translations: {
+    hy: string        // 'Հայաստան'
+    ru: string        // 'Армения'
+    // + 15 more languages
+  }
   currency: string    // 'AMD'
   timezones: Timezone[]
 }
 ```
 
-## Multilingual Helper (Nuxt/Vue)
+## Nuxt 3 / Vite Setup
+
+To prevent esbuild from processing the large JSON data files (which causes OOM crashes), exclude the package from Vite's dependency optimization:
+
+```ts
+// nuxt.config.ts
+export default defineNuxtConfig({
+  vite: {
+    optimizeDeps: {
+      exclude: ['@innovayse/geo-atlas']
+    }
+  }
+})
+```
+
+Then use `getStatesAsync` for browser-side city loading:
+
+```ts
+// composables/useCountries.ts
+import { CountriesAtlas } from '@innovayse/geo-atlas'
+
+// Async — works in browser (ESM dynamic import)
+const cities = await CountriesAtlas.getStatesAsync('AM')
+
+// Sync — works in Node.js / SSR only
+const cities = CountriesAtlas.getStates('AM')
+```
+
+## Multilingual Country/City Names
 
 ```ts
 type GeoLocale = 'en' | 'ru' | 'hy'
 
-/** Get localized city name with fallback */
-function getCityName(city: CityItem, locale: GeoLocale): string {
-  if (locale === 'en') return city.name
-  return city.translations[locale] ?? city.native ?? city.name
-}
-
-/** Get localized country name with fallback */
-function getCountryName(country: CountryItem, locale: GeoLocale): string {
+/** Get localized country name with fallback chain */
+function getCountryName(country: Country, locale: GeoLocale): string {
   if (locale === 'en') return country.name
-  return country.translations[locale] ?? country.native ?? country.name
+  return country.translations?.[locale] ?? country.native ?? country.name
 }
-```
 
-## Nuxt 3 / SSR Setup
-
-Add to `nuxt.config.ts`:
-
-```ts
-vite: {
-  ssr: {
-    noExternal: ['@innovayse/geo-atlas']
-  }
+/** Get localized city name with fallback chain */
+function getCityName(city: City, locale: GeoLocale): string {
+  if (locale === 'en') return city.name
+  return city.translations?.[locale] ?? city.native ?? city.name
 }
 ```
 
@@ -117,8 +156,9 @@ vite: {
 ```ts
 import { ValidatorAtlas } from '@innovayse/geo-atlas'
 
-ValidatorAtlas.isValidCountry('AM')   // true
-ValidatorAtlas.isValidState('AM', 'Yerevan')  // true
+ValidatorAtlas.isValidCountry('AM')            // true
+ValidatorAtlas.isValidCountry('XX')            // false
+ValidatorAtlas.isValidState('AM', 'Yerevan')   // true
 ```
 
 ## License
