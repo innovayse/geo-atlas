@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.cjs.json && tsc -p tsconfig.esm.json",
-    "test": "ts-node --project tsconfig.json scripts/test.ts"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "countries",
@@ -31,7 +32,8 @@
   "devDependencies": {
     "@types/node": "^18.19.0",
     "ts-node": "^10.9.2",
-    "typescript": "4.9.5"
+    "typescript": "4.9.5",
+    "vitest": "^4.1.4"
   },
   "files": [
     "dist/**/*",
