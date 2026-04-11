@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 """
-Translate missing ru/hy city names in geo-atlas using Claude API.
-Processes cities in batches of 150 names per API call.
+Translate missing ru/hy city names in geo-atlas using Claude CLI.
+Uses 'claude' CLI (claude.ai subscription) instead of direct API.
+Processes cities in batches of 150 names per call.
 """
 
 import json
 import os
+import re
+import subprocess
 import time
-import anthropic
 
-API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 GEO_DIR = os.path.join(os.path.dirname(__file__), "../src/data/countries")
 BATCH_SIZE = 150
 
-client = anthropic.Anthropic(api_key=API_KEY)
-
 
 def translate_batch(names: list[str], target_lang: str) -> dict[str, str]:
-    """Translate a batch of city names to target language using Claude."""
+    """Translate a batch of city names to target language using Claude CLI."""
     lang_name = "Russian" if target_lang == "ru" else "Armenian"
     lang_code = "ru" if target_lang == "ru" else "hy"
 
@@ -29,16 +28,22 @@ def translate_batch(names: list[str], target_lang: str) -> dict[str, str]:
         f"Cities:\n" + "\n".join(names)
     )
 
-    response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=4096,
-        messages=[{"role": "user", "content": prompt}]
-    )
+    try:
+        result = subprocess.run(
+            ["claude", "-p", prompt, "--model", "claude-haiku-4-5-20251001"],
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+        text = result.stdout.strip()
+    except subprocess.TimeoutExpired:
+        print(f"  [WARN] Timeout for {lang_code}")
+        return {}
+    except Exception as e:
+        print(f"  [WARN] CLI error: {e}")
+        return {}
 
-    text = response.content[0].text.strip()
-    # Try to extract JSON from code block first, then bare JSON
-    import re
-    # Remove markdown code blocks
+    # Extract JSON from response
     code_block = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
     if code_block:
         text = code_block.group(1)
@@ -46,23 +51,8 @@ def translate_batch(names: list[str], target_lang: str) -> dict[str, str]:
     start = text.find("{")
     end = text.rfind("}") + 1
     if start == -1 or end == 0:
-        print(f"  [WARN] No JSON in response for {lang_code}, retrying...")
-        # Retry once
-        time.sleep(1)
-        response2 = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=4096,
-            messages=[
-                {"role": "user", "content": prompt},
-                {"role": "assistant", "content": "{"}
-            ]
-        )
-        text2 = "{" + response2.content[0].text.strip()
-        start = text2.find("{")
-        end = text2.rfind("}") + 1
-        if start == -1 or end == 0:
-            return {}
-        text = text2
+        print(f"  [WARN] No JSON in response for {lang_code}")
+        return {}
 
     try:
         return json.loads(text[start:end])
@@ -76,7 +66,6 @@ def process_country(filepath: str, iso2: str):
     with open(filepath, encoding="utf-8") as f:
         data = json.load(f)
 
-    # Collect cities missing ru or hy
     missing_ru = []
     missing_hy = []
 
@@ -87,23 +76,20 @@ def process_country(filepath: str, iso2: str):
             if not t.get("ru"):
                 missing_ru.append(name)
             if not t.get("hy"):
-                # For Armenian cities use native field if available
                 if iso2 == "am" and city.get("native"):
-                    pass  # will handle below
+                    pass
                 else:
                     missing_hy.append(name)
 
     if not missing_ru and not missing_hy:
-        return False  # nothing to do
+        return False
 
-    # Deduplicate
     missing_ru = list(dict.fromkeys(missing_ru))
     missing_hy = list(dict.fromkeys(missing_hy))
 
     ru_translations = {}
     hy_translations = {}
 
-    # Translate RU in batches
     if missing_ru:
         print(f"  Translating {len(missing_ru)} cities to RU...")
         for i in range(0, len(missing_ru), BATCH_SIZE):
@@ -111,9 +97,8 @@ def process_country(filepath: str, iso2: str):
             result = translate_batch(batch, "ru")
             ru_translations.update(result)
             if i + BATCH_SIZE < len(missing_ru):
-                time.sleep(0.5)
+                time.sleep(0.3)
 
-    # Translate HY in batches
     if missing_hy:
         print(f"  Translating {len(missing_hy)} cities to HY...")
         for i in range(0, len(missing_hy), BATCH_SIZE):
@@ -121,9 +106,8 @@ def process_country(filepath: str, iso2: str):
             result = translate_batch(batch, "hy")
             hy_translations.update(result)
             if i + BATCH_SIZE < len(missing_hy):
-                time.sleep(0.5)
+                time.sleep(0.3)
 
-    # Apply translations back to data
     changed = False
     for state in data.get("states", []):
         for city in state.get("cities", []):
@@ -136,7 +120,6 @@ def process_country(filepath: str, iso2: str):
                 changed = True
 
             if not city["translations"].get("hy"):
-                # Armenian cities: use native field
                 if iso2 == "am" and city.get("native"):
                     city["translations"]["hy"] = city["native"]
                     changed = True
@@ -165,7 +148,6 @@ def main():
         with open(filepath, encoding="utf-8") as f:
             data = json.load(f)
 
-        # Quick check if anything is missing
         needs_work = False
         for state in data.get("states", []):
             for city in state.get("cities", []):
