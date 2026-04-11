@@ -92,6 +92,24 @@ export class CountriesAtlas {
         return undefined
     }
 
+    /**
+     * Retrieve all states of a country by its ISO2 code using dynamic import (browser-compatible).
+     *
+     * @param {string} iso2 - ISO2 code of the country.
+     * @returns {Promise<State[]>} - Promise resolving to array of state objects.
+     */
+    async getStatesAsync(iso2: string): Promise<State[]> {
+        const country = this.find(iso2)
+        if (!country || !country.iso2) return []
+        try {
+            const mod = await import(`../data/countries/${country.iso2.toLowerCase()}.json`)
+            const data = (mod as { default?: { states: State[] }, states?: State[] }).default ?? mod as { states: State[] }
+            return data.states ?? []
+        } catch {
+            return []
+        }
+    }
+
     // state(iso2: string, stateCode: string): Promise<State | undefined> | undefined {
     //     const country = this.find(iso2);
     //     if (country) {
