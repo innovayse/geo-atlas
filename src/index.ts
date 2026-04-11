@@ -16,3 +16,13 @@
 export { default as CountriesAtlas } from './helpers/CountriesAtlas';
 
 export { default as ValidatorAtlas } from './helpers/ValidatorAtlas';
+
+// Types
+export type { Country } from './types/country.interface';
+export type { State } from './types/state.interface';
+export type { City } from './types/city.type';
+export type { Timezone } from './types/timezone.type';
+export type { Translations } from './types/translation.type';
+export type { Currency } from './types/currency.type';
+export type { PhoneCode } from './types/phone-code.interface';
+export type { StateData } from './types/state-data.type';
