@@ -1,6 +1,6 @@
 {
   "name": "@innovayse/geo-atlas",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Offline countries, states and cities with multilingual support (EN/RU/HY + 15 languages).",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
