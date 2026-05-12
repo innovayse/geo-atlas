@@ -43,6 +43,8 @@ export interface Country {
     emojiU?: string;
     /** Legacy code field (same as iso2 in some datasets). */
     code?: string;
+    /** Full international phone format placeholder with country code (e.g. "+374 9X XXX XXX"). */
+    phone_format?: string;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any;

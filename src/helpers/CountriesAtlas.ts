@@ -5,6 +5,7 @@ import { PhoneCode } from '../types/phone-code.interface';
 import { StateData } from '../types/state-data.type';
 import { State } from '../types/state.interface';
 import { Timezone } from '../types/timezone.type';
+import countryLoaders from './countryLoaders';
 
 /**
  * Main helper class for querying countries, states, cities, timezones,
@@ -93,16 +94,22 @@ export class CountriesAtlas {
     }
 
     /**
-     * Retrieve all states of a country by its ISO2 code using dynamic import (browser-compatible).
+     * Retrieve all states of a country by its ISO2 code using a static loader registry.
+     *
+     * Uses explicit string-literal dynamic imports (via countryLoaders) so bundlers
+     * such as Vite, webpack, and rollup can statically analyze paths and code-split
+     * country data. Works in both Node.js (CJS/ESM) and browser environments.
      *
      * @param {string} iso2 - ISO2 code of the country.
      * @returns {Promise<State[]>} - Promise resolving to array of state objects.
      */
     async getStatesAsync(iso2: string): Promise<State[]> {
         const country = this.find(iso2)
-        if (!country || !country.iso2) return []
+        if (!country?.iso2) return []
+        const loader = countryLoaders[country.iso2.toLowerCase()]
+        if (!loader) return []
         try {
-            const mod = await import(`../data/countries/${country.iso2.toLowerCase()}.json`)
+            const mod = await loader()
             const data = (mod as { default?: { states: State[] }, states?: State[] }).default ?? mod as { states: State[] }
             return data.states ?? []
         } catch {
@@ -180,7 +187,7 @@ export class CountriesAtlas {
      * @returns {PhoneCode[]} - Array of phone code objects.
      */
     getCallingCodes(): PhoneCode[] {
-        return this.getCountries(['name', 'phone', 'iso2']).map(country => {
+        return this.getCountries(['name', 'phone', 'iso2', 'phone_format']).map(country => {
             return {
                 ...country,
                 phone_code: `+${country.phone}`,
@@ -191,7 +198,7 @@ export class CountriesAtlas {
 
     /**
      * Retrieve calling codes of a country by its ISO2 code.
-     * 
+     *
      * @param {string} iso2 - ISO2 code of the country.
      * @returns {PhoneCode | undefined} - Phone code object or undefined if not found.
      */
@@ -203,7 +210,8 @@ export class CountriesAtlas {
                 phone: country.phone as string | number,
                 iso2: country.iso2 as string,
                 phone_code: `+${country.phone}`,
-                flag: `flag flag-${country.iso2?.toLowerCase()}`
+                flag: `flag flag-${country.iso2?.toLowerCase()}`,
+                phone_format: country.phone_format as string | undefined
             }
         }
         return undefined

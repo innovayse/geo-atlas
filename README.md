@@ -9,11 +9,12 @@ Zero API calls — all data is bundled locally.
 
 ## Features
 
-- **250 countries** with ISO2/ISO3 codes, flags, phone codes, capitals, coordinates
+- **250 countries** with ISO2/ISO3 codes, flags, phone codes, phone format placeholders, capitals, coordinates
 - **147,000+ cities** across all countries with coordinates
 - **Complete multilingual city names**: English, Russian (ru), Armenian (hy) + 15 more languages
 - **Country translations**: all 250 countries translated to Russian and Armenian
 - **Native script** support for each city and country
+- **Phone format placeholders** for all 250 countries (e.g. `+374 9X XXX XXX` for Armenia)
 - **Dual ESM + CJS build** — works in browsers, Node.js, Nuxt 3, Vite
 - **TypeScript** — full type declarations included
 - **Zero runtime dependencies** — fully offline, no API calls
@@ -93,6 +94,7 @@ type Country = {
   emoji: string       // '🇦🇲'
   capital: string     // 'Yerevan'
   phone: number       // 374
+  phone_format: string // '+374 9X XXX XXX'
   latitude: string    // '40.0'
   longitude: string   // '45.0'
   translations: {
@@ -104,6 +106,34 @@ type Country = {
   timezones: Timezone[]
 }
 ```
+
+### Phone format placeholder
+
+`phone_format` contains the full international format with `X` for variable digits:
+
+```ts
+const am = CountriesAtlas.callingCode('AM')
+// {
+//   name: 'Armenia',
+//   phone: 374,
+//   iso2: 'AM',
+//   phone_code: '+374',
+//   phone_format: '+374 9X XXX XXX',
+//   flag: 'flag flag-am'
+// }
+
+// Use as input placeholder:
+// <input :placeholder="callingCode.phone_format" />
+```
+
+| Country | `phone_format` |
+|---------|---------------|
+| Armenia (AM) | `+374 9X XXX XXX` |
+| Russia (RU) | `+7 9XX XXX XXXX` |
+| USA (US) | `+1 XXX XXX XXXX` |
+| Germany (DE) | `+49 XXXX XXXXXXX` |
+| France (FR) | `+33 X XX XX XX XX` |
+| UK (GB) | `+44 XXXX XXXXXX` |
 
 ## Nuxt 3 / Vite Setup
 

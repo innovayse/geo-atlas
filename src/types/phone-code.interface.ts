@@ -10,4 +10,6 @@ export interface PhoneCode {
     phone_code?: string;
     /** CSS flag class string (e.g. "flag flag-am"). */
     flag?: string;
+    /** Full international phone number format placeholder (e.g. "+374 9X XXX XXX"). */
+    phone_format?: string;
 }
